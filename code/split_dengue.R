@@ -153,34 +153,32 @@ for (serotype in c("Dengue_1", "Dengue_2", "Dengue_3", "Dengue_4")) {
   newTaxa <- gsub("\\)", "", newTaxa)  
   attributes(seqs)$names <- newTaxa
   
-  seq_name <- as.data.frame(as.matrix(attributes(seqs)$names))
-  remove <- filter(seq_name,grepl('NA|NA|NA',V1,fixed = TRUE))
-  species.to.remove <- remove$V1
-  vec.names<-unlist(lapply(strsplit(names(seqs), ";"), function(x)x[length(x)]))
-  vec.tokeep <-which(! vec.names %in%  species.to.remove)
+  seq_name <- names(seqs) %>% as_tibble_col("Sequence_name")
+  seqs_names_to_keep <- seq_name %>% filter(!str_detect(Sequence_name, "NA\\|NA\\|NA")) %>% pull(Sequence_name)
+  seqs_to_keep <- seqs[names(seqs) %in% seqs_names_to_keep]
   
   # Write the sequences to a new FASTA file
   
-  write.fasta(sequences=seqs[vec.tokeep], names=names(seqs)[vec.tokeep],
-              file.out=paste0(opt$outfile,serotype,".fasta"))
+  write.fasta(
+    sequences = seqs_to_keep, 
+    names = names(seqs_to_keep), 
+    file.out = paste0(opt$outfile, serotype, ".fasta")
+  )
+  
 
   # Prepare and write the metadata information table
   
-  seq_name_kept <- as.data.frame(as.matrix(attributes(seqs[vec.tokeep])$names))
-  taxa_split <- data.frame(do.call('rbind',strsplit(as.character(seq_name_kept$V1),'|',fixed = TRUE)))
-  taxa_split$name <- seq_name_kept$V1
-  colnames(taxa_split) <- c('GenBank_ID', "Country", "State",
-                            "City", "Serotype", "Date","Decimal_Date","Sequence_name")
+  taxa_split <- names(seqs_to_keep) %>% 
+    as_tibble_col("Sequence_name") %>% 
+    separate_wider_delim(
+      Sequence_name, "|", 
+      names = c("GenBank_ID", "Country", "State", "City", "Virus_name", "Date", "Decimal_Date"),
+      cols_remove = FALSE
+    )
   
-  write.table(taxa_split,
-              file = paste0(opt$outfile,serotype,"_infoTbl.txt"),
-              sep = "\t", 
-              col.names = TRUE, 
-              row.names = FALSE, 
-              quote = FALSE)
+  write_tsv(taxa_split, paste0(opt$outfile,serotype,"_infoTbl.txt"), col_names = TRUE)
   
-  write.csv(taxa_split,
-            file = paste0(opt$outfile,serotype,"_infoTbl.csv"),
-            row.names = FALSE)
+  write_csv(taxa_split, paste0(opt$outfile,serotype,"_infoTbl.csv"))
+  
   cat(paste0("Processing completed for ", serotype, "\n"))
 }
