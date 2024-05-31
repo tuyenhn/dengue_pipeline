@@ -1,6 +1,6 @@
 # List of required packages
 required_packages <- c("optparse", "dplyr", "lubridate", "tidyr",
-                       "readr", "ape","seqinr", "tibble")
+                       "readr", "ape","seqinr", "tibble", "stringr")
 
 options(repos = c(CRAN = "http://cran.us.r-project.org"))
 
